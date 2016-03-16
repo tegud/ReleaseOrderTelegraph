@@ -1,4 +1,4 @@
-require('fs').readdirSync(`${__dirname}/node_modules`, (err, files) => {
+require('fs').readdirSync(`${__dirname}`, (err, files) => {
     console.log(files);
 });
 
