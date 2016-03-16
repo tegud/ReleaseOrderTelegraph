@@ -1,20 +1,28 @@
 var http = require('http');
 var expect = require('expect.js');
+var _ = require('lodash');
 
 var Server = require('../lib/server');
 
 describe('responds to http requests', function() {
-    it('returns the state green to requests to "/currentState"', done => {
-        var server = new Server();
+    var server = new Server();
 
-        server.start()
-            .then(() => {
-            var request =  http.request({
+    beforeEach(done => {
+        server = new Server({
+            port: 1234
+        });
+
+        server.start().then(() => done());
+    });
+
+    afterEach(done => server.stop().then(() => done()));
+
+    function makeRequestAndAssertOnResponse(requestOptions, body) {
+        return new Promise(resolve => {
+            var request =  http.request(_.merge({}, {
                 host: 'localhost',
-                port: 1234,
-                path: '/currentState',
-                method: 'GET'
-            }, function(response) {
+                port: 1234
+            }, requestOptions), response => {
                 var allData = '';
 
                 response.on('data', function (chunk) {
@@ -22,13 +30,38 @@ describe('responds to http requests', function() {
                 });
 
                 response.on('end', function () {
-                    expect(JSON.parse(allData)).to.eql({ signal: "green" });
-                    console.log('END');
-                    server.stop().then(() => done());
+                    resolve({
+                        response: response,
+                        data: allData
+                    })
                 });
             });
 
+            if(body) {
+                request.write(body);
+            }
+
             request.end();
+        })
+    }
+
+    it('returns the state green to requests to "/currentState"', done => {
+        makeRequestAndAssertOnResponse({
+            path: '/currentState',
+            method: 'GET'
+        }).then(response => {
+            expect(JSON.parse(response.data)).to.eql({ signal: "green" });
+            done();
+        });
+    });
+
+    it('returns a statusCode of 200 to "/currentState"', done => {
+        makeRequestAndAssertOnResponse({
+            path: '/currentState',
+            method: 'GET'
+        }).then(response => {
+            expect(response.response.statusCode).to.eql(200);
+            done();
         });
     });
 });
