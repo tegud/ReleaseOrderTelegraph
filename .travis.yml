@@ -3,3 +3,8 @@ node_js:
   - "5.8"
 before_script:
   - npm install -g grunt-cli
+notifications:
+  webhooks:
+    urls:
+      - http://webhooks.laterooms.com/travis-ci
+    on_start: always 
