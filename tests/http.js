@@ -1,7 +1,7 @@
 "use strict";
 
 const http = require('http');
-const expect = require('expect.js');
+const should = require('should');
 const _ = require('lodash');
 
 const Server = require('../lib/server');
@@ -47,23 +47,19 @@ describe('responds to http requests', function() {
         })
     }
 
-    it('returns the state green to requests to "/currentState"', done => {
+    it('returns the state green to requests to "/currentState"', () =>
         makeRequestAndAssertOnResponse({
             path: '/currentState',
             method: 'GET'
-        }).then(response => {
-            expect(JSON.parse(response.data)).to.eql({ signal: "green" });
-            done();
-        });
-    });
+        })
+        .then(response => new Promise(resolve => resolve(JSON.parse(response.data))))
+        .should.eventually.eql({ signal: "green" }));
 
-    it('returns a statusCode of 200 to "/currentState"', done => {
+    it('returns a statusCode of 200 to "/currentState"', () =>
         makeRequestAndAssertOnResponse({
             path: '/currentState',
             method: 'GET'
-        }).then(response => {
-            expect(response.response.statusCode).to.eql(200);
-            done();
-        });
-    });
+        })
+        .then(response => new Promise(resolve => resolve(response.response.statusCode)))
+        .should.eventually.equal(200));
 });
