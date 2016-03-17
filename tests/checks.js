@@ -22,7 +22,7 @@ const Server = proxyquire.noCallThru().noPreserveCache().load('../lib/server', {
 	'../checks': checks
 });
 
-describe('responds to check changes', done => {
+describe('responds to check changes', () => {
     let server;
 
     function startServer(config) {
@@ -59,7 +59,7 @@ describe('responds to check changes', done => {
         })
     }
 
-    it('returns the state red', () => {
+    it('returns the state red', () =>
         startServer({
                 checks: [
                     { type: 'test_red' }
@@ -70,10 +70,9 @@ describe('responds to check changes', done => {
                 method: 'GET'
             }))
             .then(response => new Promise(resolve => resolve(JSON.parse(response.data).signal))
-            .should.eventually.equal('red'));
-    });
+            .should.eventually.equal('red')));
 
-    describe('applies check states in order of precedence', done => {
+    describe('applies check states in order of precedence', () => {
         function checkOutputOrder() {
             const checkOrder = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
             return startServer({
