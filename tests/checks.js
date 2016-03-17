@@ -3,15 +3,27 @@
 const http = require('http');
 const expect = require('expect.js');
 const _ = require('lodash');
+const proxyquire = require('proxyquire');
+const Server = proxyquire.noCallThru().noPreserveCache().load('../lib/server', {
+	'../checks': proxyquire('../lib/checks', {
+		'./test': () => {
+            return {
+                start: () => new Promise(resolve => resolve()),
+                getState: () => { return { signal: 'red' }; }
+            };
+        }
+	})
+});
 
-const Server = require('../lib/server');
-
-describe('responds to http requests', function() {
+describe('responds to check changes', done => {
     let server;
 
     beforeEach(done => {
         server = new Server({
-            port: 1234
+            port: 1234,
+            checks: [
+                { type: 'test' }
+            ]
         });
 
         server.start().then(() => done());
@@ -47,22 +59,12 @@ describe('responds to http requests', function() {
         })
     }
 
-    it('returns the state green to requests to "/currentState"', done => {
+    it('returns the state red', done => {
         makeRequestAndAssertOnResponse({
             path: '/currentState',
             method: 'GET'
         }).then(response => {
-            expect(JSON.parse(response.data)).to.eql({ signal: "green" });
-            done();
-        });
-    });
-
-    it('returns a statusCode of 200 to "/currentState"', done => {
-        makeRequestAndAssertOnResponse({
-            path: '/currentState',
-            method: 'GET'
-        }).then(response => {
-            expect(response.response.statusCode).to.eql(200);
+            expect(JSON.parse(response.data)).to.eql({ signal: "red" });
             done();
         });
     });

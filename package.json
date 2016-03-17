@@ -26,7 +26,8 @@
     "grunt-eslint": "^18.0.0",
     "grunt-mocha-cli": "^2.0.0",
     "load-grunt-tasks": "^3.4.1",
-    "mocha": "^2.4.5"
+    "mocha": "^2.4.5",
+    "proxyquire": "^1.7.4"
   },
   "dependencies": {
     "express": "^4.13.4"
