@@ -30,6 +30,7 @@
     "should": "^8.2.2"
   },
   "dependencies": {
-    "express": "^4.13.4"
+    "express": "^4.13.4",
+    "moment": "^2.12.0"
   }
 }
