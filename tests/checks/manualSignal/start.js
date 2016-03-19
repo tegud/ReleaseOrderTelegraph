@@ -7,13 +7,13 @@ const moment = require('moment');
 const proxyquire = require('proxyquire');
 const http = require('http');
 const express = require('express');
-const fakeMoment = require('../lib/fakeMoment')();
+const fakeMoment = require('../../lib/fakeMoment')();
 
-const manualSignalCheck = proxyquire('../../lib/checks/manualSignal', {
+const manualSignalCheck = proxyquire('../../../lib/checks/manualSignal', {
     'moment': fakeMoment.moment
 });
 
-describe('manual signal', () => {
+describe('manual signal startup', () => {
     let server;
     let stubEsServer;
 
