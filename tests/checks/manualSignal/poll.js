@@ -20,6 +20,7 @@ function waitFor(timeInMs) {
 describe('manual signal startup', () => {
     let server;
     let stubEsServer;
+    let manualSignal;
 
     function setFakeEsResponses(handlers) {
         handlers.forEach(handler => stubEsServer[handler.method || 'all'](handler.path, handler.handler));
@@ -31,13 +32,16 @@ describe('manual signal startup', () => {
         server = stubEsServer.listen(9200, () => done());
     });
 
-    afterEach(() => {
-        fakeMoment.clear();
-        server.close();
+    afterEach(done => {
+        manualSignal.stop().then(() => {
+            fakeMoment.clear();
+            server.close();
+            done();
+        });
     });
 
     it('signal after elasticsearch is polled for a new value', () => {
-        const manualSignal = new manualSignalCheck({
+        manualSignal = new manualSignalCheck({
             elasticsearch: {
                 host: '127.0.0.1',
                 port: 9200,
@@ -53,7 +57,6 @@ describe('manual signal startup', () => {
             {
                 path: '/releases-2016.03/_search',
                 handler: (req, res) => {
-                    console.log(requestCount);
                     res.status(200)
                         .set('Content-Type', 'application/json; charset=UTF-8')
                         .send(JSON.stringify({
@@ -85,7 +88,7 @@ describe('manual signal startup', () => {
             }
         ]);
 
-        return manualSignal.start().then(waitFor(5)).then(() => manualSignal.getState())
+        return manualSignal.start().then(waitFor(8)).then(() => manualSignal.getState())
             .should.eventually.eql({ signal: 'red' });
     });
 });
