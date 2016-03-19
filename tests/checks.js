@@ -7,7 +7,6 @@ const proxyquire = require('proxyquire');
 
 function fakeTest(signal) {
     return {
-        start: () => new Promise(resolve => resolve()),
         getState: () => new Promise(resolve => resolve({ signal: signal }))
     };
 }
