@@ -5,16 +5,25 @@ const should = require('should');
 const _ = require('lodash');
 const proxyquire = require('proxyquire');
 
+let startCalled;
+
 function fakeTest(signal) {
     return {
         getState: () => new Promise(resolve => resolve({ signal: signal }))
     };
 }
 
+function fakeTestWithStart() {
+    return {
+        start: () => startCalled = true
+    };
+}
+
 const checks = proxyquire('../lib/checks', {
     './test_red': fakeTest.bind(undefined, 'red'),
     './test_amber': fakeTest.bind(undefined, 'amber'),
-    './test_green': fakeTest.bind(undefined, 'green')
+    './test_green': fakeTest.bind(undefined, 'green'),
+    './test_with_start': fakeTestWithStart
 });
 
 const Server = proxyquire.noCallThru().noPreserveCache().load('../lib/server', {
@@ -27,6 +36,10 @@ describe('responds to check changes', () => {
     function startServer(config) {
         return (server = new Server(_.defaults(config, { port: 1234 }))).start();
     }
+
+    beforeEach(() => {
+        startCalled = false;
+    });
 
     afterEach(done => server.stop().then(() => done()));
 
@@ -57,6 +70,15 @@ describe('responds to check changes', () => {
             request.end();
         })
     }
+
+    it('executes check start handler', () =>
+        startServer({
+                checks: [
+                    { type: 'test_with_start' }
+                ]
+            })
+            .then(() => new Promise(resolve => resolve(startCalled)))
+            .should.eventually.equal(true));
 
     it('returns the state red', () =>
         startServer({
