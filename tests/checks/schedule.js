@@ -1,23 +1,13 @@
 "use strict";
 
-let fakeCurrentDate;
-
 const should = require('should');
 const moment = require('moment');
 const proxyquire = require('proxyquire');
+const fakeMoment = require('../lib/fakeMoment')();
+
 const scheduleCheck = proxyquire('../../lib/checks/schedule', {
-    'moment': date => {
-        if(!date && fakeCurrentDate) {
-            return moment(fakeCurrentDate);
-        }
-
-        return moment(date);
-    }
+    'moment': fakeMoment.moment
 });
-
-function setFakeCurrentDate(date) {
-    return new Promise(resolve => resolve(fakeCurrentDate = date));
-}
 
 function createScheduleCheck(config) {
     return new Promise(resolve => resolve(scheduleCheck(config)));
@@ -25,7 +15,7 @@ function createScheduleCheck(config) {
 
 describe('schedule', () => {
     afterEach(() => {
-        fakeCurrentDate = undefined;
+        fakeMoment.clear();
     });
 
     it('should return red when current date is outside the configured schedule', () =>
@@ -33,7 +23,7 @@ describe('schedule', () => {
             .then(schedule => schedule.getState()).should.eventually.eql({ signal: 'red' }));
 
     it('should return green when current date is the start of the configured schedule', () =>
-        setFakeCurrentDate('2016-03-14T09:00:00')
+        fakeMoment.setDate('2016-03-14T09:00:00')
             .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [{ from: '09:00', to: '16:00' }]
@@ -42,7 +32,7 @@ describe('schedule', () => {
             .then(schedule => schedule.getState()).should.eventually.eql({ signal: 'green' }));
 
     it('should return green when current date is inside of the configured schedule', () => {
-        fakeCurrentDate = '2016-03-14T09:00:01';
+        fakeMoment.setDate('2016-03-14T09:00:01')
 
         return scheduleCheck({
             schedule: {
@@ -52,7 +42,7 @@ describe('schedule', () => {
     });
 
     it('should return red when current date is on schedule day, but outside the schedule', () => {
-        fakeCurrentDate = '2016-03-14T08:59:59';
+        fakeMoment.setDate('2016-03-14T08:59:59');
 
         return scheduleCheck({
             schedule: {
@@ -62,7 +52,7 @@ describe('schedule', () => {
     });
 
     it('should return amber when amber signal is specified on the schedule item', () => {
-        fakeCurrentDate = '2016-03-14T09:00:00';
+        fakeMoment.setDate('2016-03-14T09:00:00');
 
         return scheduleCheck({
             schedule: {
@@ -72,7 +62,7 @@ describe('schedule', () => {
     });
 
     it('should return signal of the last matched schedule', () => {
-        fakeCurrentDate = '2016-03-14T12:00:00';
+        fakeMoment.setDate('2016-03-14T12:00:00');
 
         return scheduleCheck({
             schedule: {
@@ -85,7 +75,7 @@ describe('schedule', () => {
     });
 
     it('sets reason to matching schedule', () => {
-        fakeCurrentDate = '2016-03-14T12:00:00';
+        fakeMoment.setDate('2016-03-14T12:00:00');
 
         return scheduleCheck({
             schedule: {
@@ -99,7 +89,7 @@ describe('schedule', () => {
 
     describe('defaultReasons', () => {
         it('sets reason to default reason for unmatched schedule, matching signal', () => {
-            fakeCurrentDate = '2016-03-14T00:00:00';
+            fakeMoment.setDate('2016-03-14T00:00:00');
 
             return scheduleCheck({
                 defaultReasons: {
@@ -114,7 +104,7 @@ describe('schedule', () => {
         });
 
         it('sets reason to default reason for matching schedule and matching signal', () => {
-            fakeCurrentDate = '2016-03-14T09:00:00';
+            fakeMoment.setDate('2016-03-14T09:00:00');
 
             return scheduleCheck({
                 defaultReasons: {
@@ -131,7 +121,7 @@ describe('schedule', () => {
 
     describe('overrides', () => {
         it('matching overrides are applied', () => {
-            fakeCurrentDate = '2016-03-14T13:00:00';
+            fakeMoment.setDate('2016-03-14T13:00:00');
 
             return scheduleCheck({
                 schedule: {
@@ -146,7 +136,7 @@ describe('schedule', () => {
         });
 
         it('start of matching override is applied', () => {
-            fakeCurrentDate = '2016-03-14T12:00:00';
+            fakeMoment.setDate('2016-03-14T12:00:00');
 
             return scheduleCheck({
                 schedule: {
@@ -161,7 +151,7 @@ describe('schedule', () => {
         });
 
         it('override applies outside of matching schedule', () => {
-            fakeCurrentDate = '2016-03-14T12:00:00';
+            fakeMoment.setDate('2016-03-14T12:00:00');
 
             return scheduleCheck({
                 schedule: { },
@@ -172,7 +162,7 @@ describe('schedule', () => {
         });
 
         it('non-matching override is not applied', () => {
-            fakeCurrentDate = '2016-03-14T11:59:59';
+            fakeMoment.setDate('2016-03-14T11:59:59');
 
             return scheduleCheck({
                 schedule: {
@@ -187,7 +177,7 @@ describe('schedule', () => {
         });
 
         it('applies the last of multiple matching overrides', () => {
-            fakeCurrentDate = '2016-03-14T13:00:00';
+            fakeMoment.setDate('2016-03-14T13:00:00');
 
             return scheduleCheck({
                 schedule: {

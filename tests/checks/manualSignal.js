@@ -7,15 +7,10 @@ const moment = require('moment');
 const proxyquire = require('proxyquire');
 const http = require('http');
 const express = require('express');
+const fakeMoment = require('../lib/fakeMoment')();
 
 const manualSignalCheck = proxyquire('../../lib/checks/manualSignal', {
-    'moment': date => {
-        if(!date && fakeCurrentDate) {
-            return moment(fakeCurrentDate);
-        }
-
-        return moment(date);
-    }
+    'moment': fakeMoment.moment
 });
 
 describe('manual signal', () => {
@@ -33,7 +28,7 @@ describe('manual signal', () => {
     });
 
     afterEach(() => {
-        fakeCurrentDate = undefined;
+        fakeMoment.clear();
         server.close();
     });
 
@@ -90,7 +85,7 @@ describe('manual signal', () => {
     });
 
     it('signal is set to last manual set entry for the day ', () => {
-        fakeCurrentDate = '2016-03-14T09:00:01';
+        fakeMoment.setDate('2016-03-14T09:00:01');
 
         setFakeEsResponses([
             {
@@ -140,7 +135,7 @@ describe('manual signal', () => {
 
     describe('query', () => {
         it('queries the correct index by month', done => {
-            fakeCurrentDate = '2016-02-14T09:00:01';
+            fakeMoment.setDate('2016-02-14T09:00:01');
 
             setFakeEsResponses([
                 {
@@ -158,11 +153,11 @@ describe('manual signal', () => {
                 }
             });
 
-            manualSignal.start()
+            manualSignal.start();
         });
 
         it('queries the correct index by day', done => {
-            fakeCurrentDate = '2016-02-14T09:00:01';
+            fakeMoment.setDate('2016-02-14T09:00:01');
 
             setFakeEsResponses([
                 {
@@ -180,11 +175,11 @@ describe('manual signal', () => {
                 }
             });
 
-            manualSignal.start()
+            manualSignal.start();
         });
 
         it('creates correct lucene query for the _type and day', () => {
-            fakeCurrentDate = '2016-02-14T09:00:01';
+            fakeMoment.setDate('2016-02-14T09:00:01');
 
             const testPromise = new Promise(resolve => setFakeEsResponses([
                 {
@@ -204,13 +199,13 @@ describe('manual signal', () => {
                 }
             });
 
-            manualSignal.start()
+            manualSignal.start();
 
             return testPromise;
         });
 
         it('sorts by @timestamp desc', () => {
-            fakeCurrentDate = '2016-02-14T09:00:01';
+            fakeMoment.setDate('2016-02-14T09:00:01');
 
             const testPromise = new Promise(resolve => setFakeEsResponses([
                 {
@@ -230,7 +225,7 @@ describe('manual signal', () => {
                 }
             });
 
-            manualSignal.start()
+            manualSignal.start();
 
             return testPromise;
         });
