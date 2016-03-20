@@ -22,7 +22,7 @@ const Server = proxyquire.noCallThru().noPreserveCache().load('../lib/server', {
 	'../checks': checks,
     'fs': {
         'readFileSync': () => testConfigFileData,
-        'readFile': (file, encoding, callback) => callback(null, testConfigFileData) 
+        'readFile': (file, encoding, callback) => callback(null, testConfigFileData)
     }
 });
 
@@ -47,7 +47,7 @@ describe('config', () => {
             ]
         }`;
 
-        startServer({
+        return startServer({
                 checks: [
                     { type: 'test_with_start' }
                 ]
