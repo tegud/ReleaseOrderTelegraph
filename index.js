@@ -1,1 +1,1 @@
-require('./lib/server')({ port: 1234 }).start();
+require('./lib/server')("config.json").start();
