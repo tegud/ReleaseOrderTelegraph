@@ -20,10 +20,11 @@ const checks = proxyquire('../lib/checks', {
 
 const Server = proxyquire.noCallThru().noPreserveCache().load('../lib/server', {
 	'../checks': checks,
-    'fs': {
-        'readFileSync': () => testConfigFileData,
-        'readFile': (file, encoding, callback) => callback(null, testConfigFileData)
-    }
+    '../config': proxyquire('../lib/config', {
+        'fs': {
+            'readFile': (file, encoding, callback) => callback(null, testConfigFileData)
+        }
+    })
 });
 
 describe('config', () => {
