@@ -9,7 +9,7 @@ const http = require('http');
 const express = require('express');
 const fakeMoment = require('../../lib/fakeMoment')();
 
-const manualSignalCheck = proxyquire('../../../lib/checks/manualSignal', {
+const concurrentReleasesCheck = proxyquire('../../../lib/checks/concurrentReleases', {
     'moment': fakeMoment.moment
 });
 
@@ -17,10 +17,10 @@ function waitFor(timeInMs) {
     return () => new Promise(resolve => setTimeout(() => resolve(), timeInMs));
 }
 
-describe('manual signal startup', () => {
+describe('concurrentReleases polling', () => {
     let server;
     let stubEsServer;
-    let manualSignal;
+    let check;
 
     function setFakeEsResponses(handlers) {
         handlers.forEach(handler => stubEsServer[handler.method || 'all'](handler.path, handler.handler));
@@ -33,7 +33,7 @@ describe('manual signal startup', () => {
     });
 
     afterEach(done => {
-        manualSignal.stop().then(() => {
+        check.stop().then(() => {
             fakeMoment.clear();
             server.close();
             done();
@@ -41,7 +41,10 @@ describe('manual signal startup', () => {
     });
 
     it('signal after elasticsearch is polled for a new value', () => {
-        manualSignal = new manualSignalCheck({
+        check = new concurrentReleasesCheck({
+            thresholds: [
+                { signal: 'red', limit: 2 }
+            ],
             elasticsearch: {
                 host: '127.0.0.1',
                 port: 9200,
@@ -70,16 +73,7 @@ describe('manual signal startup', () => {
                         "hits": {
                             "total": requestCount,
                             "max_score": 1,
-                            "hits": requestCount ? [{
-                                    "_index": "releases-2016.03",
-                                    "_type": "release_order_signal",
-                                    "_id": "AVNgt4GFQRYe6m_Jj4Gl",
-                                    "_score": 1,
-                                    "_source": {
-                                        "@timestamp": "2016-03-14T08:29:11+00:00",
-                                        "newSignal": "red"
-                                    }
-                                }] : []
+                            "hits": []
                             }
                         }))
 
@@ -88,7 +82,7 @@ describe('manual signal startup', () => {
             }
         ]);
 
-        return manualSignal.start().then(waitFor(50)).then(() => manualSignal.getState())
+        return check.start().then(waitFor(50)).then(() => check.getState())
             .should.eventually.eql({ signal: 'red' });
     });
 });

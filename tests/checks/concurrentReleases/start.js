@@ -9,11 +9,11 @@ const http = require('http');
 const express = require('express');
 const fakeMoment = require('../../lib/fakeMoment')();
 
-const manualSignalCheck = proxyquire('../../../lib/checks/manualSignal', {
+const concurrentReleasesCheck = proxyquire('../../../lib/checks/concurrentReleases', {
     'moment': fakeMoment.moment
 });
 
-describe('manual signal polling', () => {
+describe('concurrent releases check startup', () => {
     let server;
     let stubEsServer;
 
@@ -32,29 +32,15 @@ describe('manual signal polling', () => {
         server.close();
     });
 
-    it('signal is set to unknown when Elasticsearch responds with an error', () => {
-        const manualSignal = new manualSignalCheck({
-            elasticsearch: {
-                host: '127.0.0.1',
-                port: 9200,
-                index: 'releases-${YYYY}.${MM}',
-                type: 'release_order_signal'
-            }
-        });
-
-        return manualSignal.start().then(() => manualSignal.getState())
-            .should.eventually.eql({ signal: 'unknown' });
-    });
-
-    it('signal is set to green with no manual set entries for the day', () => {
+    it('signal is set to green when no releases are in progress', () => {
         fakeMoment.setDate('2016-03-14T09:00:00');
 
-        const manualSignal = new manualSignalCheck({
+        const concurrentReleases = new concurrentReleasesCheck({
             elasticsearch: {
                 host: '127.0.0.1',
                 port: 9200,
                 index: 'releases-${YYYY}.${MM}',
-                type: 'release_order_signal'
+                type: ''
             }
         });
 
@@ -82,12 +68,24 @@ describe('manual signal polling', () => {
             }
         ]);
 
-        return manualSignal.start().then(() => manualSignal.getState())
+        return concurrentReleases.start().then(() => concurrentReleases.getState())
             .should.eventually.eql({ signal: 'green' });
     });
 
-    it('signal is set to last manual set entry for the day ', () => {
-        fakeMoment.setDate('2016-03-14T09:00:01');
+    it('signal is set to the specified level when number of releases is over configured limit', () => {
+        fakeMoment.setDate('2016-03-14T09:00:00');
+
+        const concurrentReleases = new concurrentReleasesCheck({
+            thresholds: [
+                { signal: 'amber', limit: 2 }
+            ],
+            elasticsearch: {
+                host: '127.0.0.1',
+                port: 9200,
+                index: 'releases-${YYYY}.${MM}',
+                type: ''
+            }
+        });
 
         setFakeEsResponses([
             {
@@ -104,35 +102,104 @@ describe('manual signal polling', () => {
                             "failed": 0
                         },
                         "hits": {
-                            "total": 17,
+                            "total": 2,
                             "max_score": 1,
-                            "hits": [{
-                                    "_index": "releases-2016.03",
-                                    "_type": "release_order_signal",
-                                    "_id": "AVNgt4GFQRYe6m_Jj4Gl",
-                                    "_score": 1,
-                                    "_source": {
-                                        "@timestamp": "2016-03-14T08:29:11+00:00",
-                                        "newSignal": "red"
-                                    }
-                                }]
+                            "hits": []
                             }
                         }))
 
             }
         ]);
 
-        const manualSignal = new manualSignalCheck({
+        return concurrentReleases.start().then(() => concurrentReleases.getState())
+            .should.eventually.eql({ signal: 'amber' });
+    });
+
+    it('signal is set to the green when number of releases is under all configured limit', () => {
+        fakeMoment.setDate('2016-03-14T09:00:00');
+
+        const concurrentReleases = new concurrentReleasesCheck({
+            thresholds: [
+                { signal: 'amber', limit: 2 }
+            ],
             elasticsearch: {
                 host: '127.0.0.1',
                 port: 9200,
                 index: 'releases-${YYYY}.${MM}',
-                type: 'release_order_signal'
+                type: ''
             }
         });
 
-        return manualSignal.start().then(() => manualSignal.getState())
-            .should.eventually.eql({ signal: 'red' });
+        setFakeEsResponses([
+            {
+                path: '/releases-2016.03/_search',
+                handler: (req, res) =>
+                    res.status(200)
+                        .set('Content-Type', 'application/json; charset=UTF-8')
+                        .send(JSON.stringify({
+                        "took": 418,
+                        "timed_out": false,
+                        "_shards": {
+                            "total": 5,
+                            "successful": 5,
+                            "failed": 0
+                        },
+                        "hits": {
+                            "total": 1,
+                            "max_score": 1,
+                            "hits": []
+                            }
+                        }))
+
+            }
+        ]);
+
+        return concurrentReleases.start().then(() => concurrentReleases.getState())
+            .should.eventually.eql({ signal: 'green' });
+    });
+
+    it('signal is set to the last matched threshold', () => {
+        fakeMoment.setDate('2016-03-14T09:00:00');
+
+        const concurrentReleases = new concurrentReleasesCheck({
+            thresholds: [
+                { signal: 'amber', limit: 2 },
+                { signal: 'amber', limit: 3 }
+            ],
+            elasticsearch: {
+                host: '127.0.0.1',
+                port: 9200,
+                index: 'releases-${YYYY}.${MM}',
+                type: ''
+            }
+        });
+
+        setFakeEsResponses([
+            {
+                path: '/releases-2016.03/_search',
+                handler: (req, res) =>
+                    res.status(200)
+                        .set('Content-Type', 'application/json; charset=UTF-8')
+                        .send(JSON.stringify({
+                        "took": 418,
+                        "timed_out": false,
+                        "_shards": {
+                            "total": 5,
+                            "successful": 5,
+                            "failed": 0
+                        },
+                        "hits": {
+                            "total": 5,
+                            "max_score": 1,
+                            "hits": []
+                            }
+                        }))
+
+            }
+        ]);
+
+        return concurrentReleases.start().then(() => concurrentReleases.getState())
+            .should.eventually.eql({ signal: 'amber' });
     });
 
     describe('query', () => {
@@ -146,16 +213,16 @@ describe('manual signal polling', () => {
                 }
             ]);
 
-            const manualSignal = new manualSignalCheck({
+            const concurrentReleases = new concurrentReleasesCheck({
                 elasticsearch: {
                     host: '127.0.0.1',
                     port: 9200,
                     index: 'releases-${YYYY}.${MM}',
-                    type: 'release_order_signal'
+                    type: ''
                 }
             });
 
-            manualSignal.start();
+            concurrentReleases.start();
         });
 
         it('queries the correct index by day', done => {
@@ -168,16 +235,16 @@ describe('manual signal polling', () => {
                 }
             ]);
 
-            const manualSignal = new manualSignalCheck({
+            const concurrentReleases = new concurrentReleasesCheck({
                 elasticsearch: {
                     host: '127.0.0.1',
                     port: 9200,
                     index: 'releases-${YYYY}.${MM}.${DD}',
-                    type: 'release_order_signal'
+                    type: ''
                 }
             });
 
-            manualSignal.start();
+            concurrentReleases.start();
         });
 
         it('creates correct lucene query for the _type and day', () => {
@@ -190,18 +257,18 @@ describe('manual signal polling', () => {
                         resolve(req.query.q);
                     }
                 }
-            ])).should.eventually.equal("_type: release_order_signal AND @timestamp: [2016-02-14 TO *]");
+            ])).should.eventually.equal("_type: release AND environment: live AND isComplete: false");
 
-            const manualSignal = new manualSignalCheck({
+            const concurrentReleases = new concurrentReleasesCheck({
                 elasticsearch: {
                     host: '127.0.0.1',
                     port: 9200,
                     index: 'releases-${YYYY}.${MM}',
-                    type: 'release_order_signal'
+                    type: 'release'
                 }
             });
 
-            manualSignal.start();
+            concurrentReleases.start();
 
             return testPromise;
         });
@@ -218,16 +285,16 @@ describe('manual signal polling', () => {
                 }
             ])).should.eventually.equal("@timestamp:desc");
 
-            const manualSignal = new manualSignalCheck({
+            const concurrentReleases = new concurrentReleasesCheck({
                 elasticsearch: {
                     host: '127.0.0.1',
                     port: 9200,
                     index: 'releases-${YYYY}.${MM}',
-                    type: 'release_order_signal'
+                    type: ''
                 }
             });
 
-            manualSignal.start();
+            concurrentReleases.start();
 
             return testPromise;
         });
