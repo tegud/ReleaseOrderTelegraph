@@ -10,6 +10,9 @@ const express = require('express');
 const fakeMoment = require('../../lib/fakeMoment')();
 
 const manualSignalCheck = proxyquire('../../../lib/checks/manualSignal', {
+    '../../elasticsearch/poller': proxyquire('../../../lib/elasticsearch/poller', {
+        'moment': fakeMoment.moment
+    }),
     'moment': fakeMoment.moment
 });
 
