@@ -53,7 +53,7 @@ describe('responds to http requests', function() {
             method: 'GET'
         })
         .then(response => new Promise(resolve => resolve(JSON.parse(response.data))))
-        .should.eventually.eql({ signal: "green" }));
+        .should.eventually.eql({ signal: "green", checks: [] }));
 
     it('returns a statusCode of 200 to "/currentState"', () =>
         makeRequestAndAssertOnResponse({

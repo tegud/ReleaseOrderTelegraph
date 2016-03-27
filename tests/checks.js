@@ -112,6 +112,21 @@ describe('responds to check changes', () => {
             .then(response => new Promise(resolve => resolve(JSON.parse(response.data).signal))
             .should.eventually.equal('red')));
 
+    it('returns the check status', () =>
+        startServer({
+                checks: [
+                    { type: 'test_red' }
+                ]
+            })
+            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+                path: '/currentState',
+                method: 'GET'
+            }))
+            .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks))
+            .should.eventually.eql([
+                { type: 'test_red', signal: 'red' }
+            ])));
+
     describe('applies check states in order of precedence', () => {
         function checkOutputOrder() {
             const checkOrder = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));

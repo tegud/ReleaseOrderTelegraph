@@ -74,7 +74,7 @@ describe('concurrentReleases polling', () => {
                             "failed": 0
                         },
                         "hits": {
-                            "total": requestCount,
+                            "total": requestCount > 2 ? 2 : requestCount,
                             "max_score": 1,
                             "hits": []
                             }
@@ -86,6 +86,12 @@ describe('concurrentReleases polling', () => {
         ]);
 
         return check.start().then(waitFor(50)).then(() => check.getState())
-            .should.eventually.eql({ signal: 'red' });
+            .should.eventually.eql({
+                signal: 'red',
+                concurrentReleases: 2,
+                thresholds: [
+                    { signal: 'red', limit: 2 }
+                ]
+            });
     });
 });

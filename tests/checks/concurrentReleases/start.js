@@ -72,7 +72,7 @@ describe('concurrent releases check startup', () => {
         ]);
 
         return concurrentReleases.start().then(() => concurrentReleases.getState())
-            .should.eventually.eql({ signal: 'green' });
+            .should.eventually.eql({ signal: 'green', concurrentReleases: 0, thresholds: [] });
     });
 
     it('signal is set to the specified level when number of releases is over configured limit', () => {
@@ -115,7 +115,7 @@ describe('concurrent releases check startup', () => {
         ]);
 
         return concurrentReleases.start().then(() => concurrentReleases.getState())
-            .should.eventually.eql({ signal: 'amber' });
+            .should.eventually.eql({ signal: 'amber', concurrentReleases: 2, thresholds: [{ signal: 'amber', limit: 2 }] });
     });
 
     it('signal is set to the green when number of releases is under all configured limit', () => {
@@ -202,7 +202,14 @@ describe('concurrent releases check startup', () => {
         ]);
 
         return concurrentReleases.start().then(() => concurrentReleases.getState())
-            .should.eventually.eql({ signal: 'amber' });
+            .should.eventually.eql({
+                signal: 'amber',
+                concurrentReleases: 5,
+                thresholds: [
+                    { signal: 'amber', limit: 2 },
+                    { signal: 'amber', limit: 3 }
+                ]
+             });
     });
 
     describe('query', () => {
