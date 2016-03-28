@@ -158,7 +158,7 @@ describe('concurrent releases check startup', () => {
         ]);
 
         return concurrentReleases.start().then(() => concurrentReleases.getState())
-            .should.eventually.eql({ signal: 'green' });
+            .should.eventually.eql({ signal: 'green', concurrentReleases: 1, thresholds: [{ signal: 'amber', limit: 2 }] });
     });
 
     it('signal is set to the last matched threshold', () => {
@@ -267,7 +267,7 @@ describe('concurrent releases check startup', () => {
                         resolve(req.query.q);
                     }
                 }
-            ])).should.eventually.equal("_type: release AND environment: live AND isComplete: false");
+            ])).should.eventually.equal("_type: release AND @timestamp: [2016-02-14 TO *] AND environment: live AND isComplete: false");
 
             const concurrentReleases = new concurrentReleasesCheck({
                 elasticsearch: {

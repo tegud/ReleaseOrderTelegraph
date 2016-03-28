@@ -62,4 +62,14 @@ describe('responds to http requests', function() {
         })
         .then(response => new Promise(resolve => resolve(response.response.statusCode)))
         .should.eventually.equal(200));
+
+    it('returns CORS allow header', () =>
+        makeRequestAndAssertOnResponse({
+            path: '/currentState',
+            method: 'GET'
+        })
+        .then(response => new Promise(resolve => {
+            return resolve(response.response.headers['access-control-allow-origin']);
+        }))
+        .should.eventually.equal("*"));
 });
