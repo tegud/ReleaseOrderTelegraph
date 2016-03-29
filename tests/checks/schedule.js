@@ -191,6 +191,18 @@ describe('schedule', () => {
             .then(result => new Promise(resolve => resolve(result.nextChange)))
             .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-15T09:00:00+00:00' }));
 
+        it('after several days of no schedule', () => fakeMoment.setDate('2016-03-12T16:00:00')
+            .then(createSchedule({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' }
+                    ]
+                }
+            }))
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.nextChange)))
+            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' }));
+
     });
 
     describe('overrides', () => {
