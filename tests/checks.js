@@ -112,6 +112,32 @@ describe('responds to check changes', () => {
             .then(response => new Promise(resolve => resolve(JSON.parse(response.data).signal))
             .should.eventually.equal('red')));
 
+    it('sets check name', () =>
+        startServer({
+                checks: [
+                    { type: 'test_red', name: 'Red Test' }
+                ]
+            })
+            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+                path: '/currentState',
+                method: 'GET'
+            }))
+            .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks[0].name))
+            .should.eventually.equal('Red Test')));
+
+    it('sets check type', () =>
+        startServer({
+                checks: [
+                    { type: 'test_red' }
+                ]
+            })
+            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+                path: '/currentState',
+                method: 'GET'
+            }))
+            .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks[0].type))
+            .should.eventually.equal('test_red')));
+
     it('returns the check status', () =>
         startServer({
                 checks: [

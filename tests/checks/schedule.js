@@ -28,7 +28,9 @@ describe('schedule', () => {
 
     it('should return red when current date is outside the configured schedule', () =>
         createScheduleCheck()
-            .then(getState()).should.eventually.eql({ signal: 'red' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('red'));
 
     it('should return green when current date is the start of the configured schedule', () =>
         fakeMoment.setDate('2016-03-14T09:00:00')
@@ -37,7 +39,9 @@ describe('schedule', () => {
                     'Monday': [{ from: '09:00', to: '16:00' }]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'green' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('green'));
 
     it('should return green when current date is inside of the configured schedule', () =>
         fakeMoment.setDate('2016-03-14T09:00:01')
@@ -46,16 +50,20 @@ describe('schedule', () => {
                     'Monday': [{ from: '09:00', to: '16:00' }]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'green' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('green'));
 
-    it('should return red when current date is on schedule day, but outside the schedule', () => 
+    it('should return red when current date is on schedule day, but outside the schedule', () =>
         fakeMoment.setDate('2016-03-14T08:59:59')
             .then(createSchedule({
                 schedule: {
                     'Monday': [{ from: '09:00', to: '16:00' }]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'red' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('red'));
 
     it('should return amber when amber signal is specified on the schedule item', () =>
         fakeMoment.setDate('2016-03-14T09:00:00')
@@ -64,7 +72,9 @@ describe('schedule', () => {
                     'Monday': [{ from: '09:00', to: '16:00', signal: 'amber' }]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'amber' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('amber'));
 
     it('should return signal of the last matched schedule', () =>
         fakeMoment.setDate('2016-03-14T12:00:00')
@@ -76,7 +86,9 @@ describe('schedule', () => {
                     ]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'amber' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.signal)))
+            .should.eventually.eql('amber'));
 
     it('sets reason to matching schedule', () =>
         fakeMoment.setDate('2016-03-14T12:00:00')
@@ -88,7 +100,9 @@ describe('schedule', () => {
                     ]
                 }
             }))
-            .then(getState()).should.eventually.eql({ signal: 'amber', reason: 'Reduced support during lunch' }));
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.reason)))
+            .should.eventually.eql('Reduced support during lunch'));
 
     describe('defaultReasons', () => {
         it('sets reason to default reason for unmatched schedule, matching signal', () =>
@@ -103,7 +117,9 @@ describe('schedule', () => {
                         ]
                     }
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'red', reason: 'Cannot release outside of permitted schedule.' }));
+                .then(getState())
+                .then(result => new Promise(resolve => resolve(result.reason)))
+                .should.eventually.eql('Cannot release outside of permitted schedule.'));
 
         it('sets reason to default reason for matching schedule and matching signal', () =>
             fakeMoment.setDate('2016-03-14T09:00:00')
@@ -117,7 +133,64 @@ describe('schedule', () => {
                         ]
                     }
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'green', reason: 'Ok to release during scheduled hours' }));
+                .then(getState())
+                .then(result => new Promise(resolve => resolve(result.reason)))
+                .should.eventually.eql('Ok to release during scheduled hours'));
+    });
+
+    describe('nextChange is set to next scheduled change', () => {
+        it('before day\'s schedule start', () => fakeMoment.setDate('2016-03-14T08:00:00')
+            .then(createSchedule({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' }
+                    ]
+                }
+            }))
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.nextChange)))
+            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' }));
+
+        it('during current day\'s schedule', () => fakeMoment.setDate('2016-03-14T09:00:00')
+            .then(createSchedule({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' }
+                    ]
+                }
+            }))
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.nextChange)))
+            .should.eventually.eql({ 'toSignal': 'red', 'changeAt': '2016-03-14T16:00:00+00:00' }));
+
+        it('next schedule after matching current day\'s schedule', () => fakeMoment.setDate('2016-03-14T09:00:00')
+            .then(createSchedule({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '15:00' },
+                        { from: '15:00', to: '16:00', signal: 'amber' }
+                    ]
+                }
+            }))
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.nextChange)))
+            .should.eventually.eql({ 'toSignal': 'amber', 'changeAt': '2016-03-14T15:00:00+00:00' }));
+
+        it('after current day\'s schedule', () => fakeMoment.setDate('2016-03-14T16:00:00')
+            .then(createSchedule({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' }
+                    ],
+                    'Tuesday': [
+                        { from: '09:00', to: '16:00' }
+                    ]
+                }
+            }))
+            .then(getState())
+            .then(result => new Promise(resolve => resolve(result.nextChange)))
+            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-15T09:00:00+00:00' }));
+
     });
 
     describe('overrides', () => {
@@ -133,7 +206,7 @@ describe('schedule', () => {
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
 
         it('start of matching override is applied', () =>
             fakeMoment.setDate('2016-03-14T12:00:00')
@@ -147,7 +220,7 @@ describe('schedule', () => {
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
 
         it('override applies outside of matching schedule', () =>
             fakeMoment.setDate('2016-03-14T12:00:00')
@@ -157,7 +230,7 @@ describe('schedule', () => {
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
 
         it('non-matching override is not applied', () =>
             fakeMoment.setDate('2016-03-14T11:59:59')
@@ -171,7 +244,7 @@ describe('schedule', () => {
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'green' }));
+                .then(getState()).should.eventually.have.properties({ signal: 'green' }));
 
         it('applies the last of multiple matching overrides', () =>
             fakeMoment.setDate('2016-03-14T13:00:00')
@@ -186,6 +259,6 @@ describe('schedule', () => {
                         { from: '2016-03-14T13:00:00', to: '2016-03-14T14:00:00', signal: 'red', 'reason': 'Extra special change Freeze for easter period' }
                     ]
                 }))
-                .then(getState()).should.eventually.eql({ signal: 'red', reason: 'Extra special change Freeze for easter period' }));
+                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Extra special change Freeze for easter period' }));
     });
 });
