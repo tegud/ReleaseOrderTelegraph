@@ -238,6 +238,56 @@ describe('manual signal polling', () => {
             .should.eventually.eql({ signal: 'red', setBy: "Steve" });
     });
 
+    it('setUntil is set to last manual set entry for the day ', () => {
+        fakeMoment.setDate('2016-03-14T09:00:01');
+
+        setFakeEsResponses([
+            {
+                path: '/releases-2016.03/_search',
+                handler: (req, res) =>
+                    res.status(200)
+                        .set('Content-Type', 'application/json; charset=UTF-8')
+                        .send(JSON.stringify({
+                        "took": 418,
+                        "timed_out": false,
+                        "_shards": {
+                            "total": 5,
+                            "successful": 5,
+                            "failed": 0
+                        },
+                        "hits": {
+                            "total": 17,
+                            "max_score": 1,
+                            "hits": [{
+                                    "_index": "releases-2016.03",
+                                    "_type": "release_order_signal",
+                                    "_id": "AVNgt4GFQRYe6m_Jj4Gl",
+                                    "_score": 1,
+                                    "_source": {
+                                        "@timestamp": "2016-03-14T08:29:11+00:00",
+                                        "newSignal": "red",
+                                        "setUntil": "2016-03-14T08:34:11+00:00"
+                                    }
+                                }]
+                            }
+                        }))
+
+            }
+        ]);
+
+        const manualSignal = new manualSignalCheck({
+            elasticsearch: {
+                host: '127.0.0.1',
+                port: 9200,
+                index: 'releases-${YYYY}.${MM}',
+                type: 'release_order_signal'
+            }
+        });
+
+        return manualSignal.start().then(() => manualSignal.getState())
+            .should.eventually.eql({ signal: 'red', setUntil: "2016-03-14T08:34:11+00:00" });
+    });
+
     describe('query', () => {
         it('queries the correct index by month', done => {
             fakeMoment.setDate('2016-02-14T09:00:01');
