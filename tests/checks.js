@@ -52,7 +52,7 @@ describe('responds to check changes', () => {
 
     afterEach(done => server.stop().then(() => done()));
 
-    function makeRequestAndAssertOnResponse(requestOptions, body) {
+    function makeRequest(requestOptions, body) {
         return new Promise(resolve => {
             var request =  http.request(_.merge({}, {
                 host: 'localhost',
@@ -105,7 +105,7 @@ describe('responds to check changes', () => {
                     { type: 'test_red' }
                 ]
             })
-            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+            .then(makeRequest.bind(undefined, {
                 path: '/currentState',
                 method: 'GET'
             }))
@@ -118,7 +118,7 @@ describe('responds to check changes', () => {
                     { type: 'test_red', name: 'Red Test' }
                 ]
             })
-            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+            .then(makeRequest.bind(undefined, {
                 path: '/currentState',
                 method: 'GET'
             }))
@@ -131,7 +131,7 @@ describe('responds to check changes', () => {
                     { type: 'test_red' }
                 ]
             })
-            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+            .then(makeRequest.bind(undefined, {
                 path: '/currentState',
                 method: 'GET'
             }))
@@ -144,7 +144,7 @@ describe('responds to check changes', () => {
                     { type: 'test_red' }
                 ]
             })
-            .then(makeRequestAndAssertOnResponse.bind(undefined, {
+            .then(makeRequest.bind(undefined, {
                 path: '/currentState',
                 method: 'GET'
             }))
@@ -159,7 +159,7 @@ describe('responds to check changes', () => {
             return startServer({
                     checks: checkOrder.map(check => { return { type: `test_${check}` }; })
                 })
-                .then(makeRequestAndAssertOnResponse.bind(undefined, {
+                .then(makeRequest.bind(undefined, {
                     path: '/currentState',
                     method: 'GET'
                 }))
