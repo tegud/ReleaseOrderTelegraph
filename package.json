@@ -1,0 +1,37 @@
+{
+  "name": "release-order-telegraph",
+  "version": "1.0.0",
+  "description": "ReleaseOrderTelegraph (RoT) is a project designed to move away from gated, scheduled releases, and instead provide teams an indicator to self manage their own releases.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tegud/ReleaseOrderTelegraph.git"
+  },
+  "author": "Steve Elliott",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tegud/ReleaseOrderTelegraph/issues"
+  },
+  "homepage": "https://github.com/tegud/ReleaseOrderTelegraph#readme",
+  "devDependencies": {
+    "eslint": "^2.4.0",
+    "grunt": "^0.4.5",
+    "grunt-eslint": "^18.0.0",
+    "grunt-mocha-cli": "^2.0.0",
+    "load-grunt-tasks": "^3.4.1",
+    "mocha": "^2.4.5",
+    "proxyquire": "^1.7.4",
+    "should": "^8.2.2"
+  },
+  "dependencies": {
+    "elasticsearch": "^10.1.3",
+    "express": "^4.13.4",
+    "moment": "^2.12.0"
+  }
+}
