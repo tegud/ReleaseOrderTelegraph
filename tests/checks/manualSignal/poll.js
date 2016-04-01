@@ -44,6 +44,8 @@ describe('manual signal startup', () => {
     });
 
     it('signal after elasticsearch is polled for a new value', () => {
+        fakeMoment.setDate('2016-03-14T09:00:00');
+        
         manualSignal = new manualSignalCheck({
             elasticsearch: {
                 host: '127.0.0.1',

@@ -44,6 +44,8 @@ describe('concurrentReleases polling', () => {
     });
 
     it('signal after elasticsearch is polled for a new value', () => {
+        fakeMoment.setDate('2016-03-14T09:00:00');
+
         check = new concurrentReleasesCheck({
             thresholds: [
                 { signal: 'red', limit: 2 }
