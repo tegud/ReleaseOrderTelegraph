@@ -138,6 +138,20 @@ describe('responds to check changes', () => {
             .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks[0].type))
             .should.eventually.equal('test_red')));
 
+    it('sets check name to default with identifier', () =>
+        startServer({
+                checks: [
+                    { type: 'test_red' },
+                    { type: 'test_red' }
+                ]
+            })
+            .then(makeRequest.bind(undefined, {
+                path: '/currentState',
+                method: 'GET'
+            }))
+            .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks[1].name))
+            .should.eventually.equal('test_red-2')));
+
     it('returns the check status', () =>
         startServer({
                 checks: [
@@ -150,7 +164,7 @@ describe('responds to check changes', () => {
             }))
             .then(response => new Promise(resolve => resolve(JSON.parse(response.data).checks))
             .should.eventually.eql([
-                { type: 'test_red', signal: 'red' }
+                { type: 'test_red', name: 'test_red', signal: 'red' }
             ])));
 
     describe('applies check states in order of precedence', () => {
