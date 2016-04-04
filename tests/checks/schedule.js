@@ -26,7 +26,7 @@ describe('schedule', () => {
         fakeMoment.clear();
     });
 
-    it('should return red when current date is outside the configured schedule', () =>
+    it.only('should return red when current date is outside the configured schedule', () =>
         createScheduleCheck()
             .then(getState())
             .then(result => new Promise(resolve => resolve(result.signal)))
