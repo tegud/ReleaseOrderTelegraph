@@ -8,6 +8,7 @@ const proxyquire = require('proxyquire');
 const http = require('http');
 const express = require('express');
 const fakeMoment = require('../../lib/fakeMoment')();
+const EventEmitter = require('events');
 
 const manualSignalCheck = proxyquire('../../../lib/checks/manualSignal', {
     '../../elasticsearch/poller': proxyquire('../../../lib/elasticsearch/poller', {
@@ -20,7 +21,7 @@ function waitFor(timeInMs) {
     return () => new Promise(resolve => setTimeout(() => resolve(), timeInMs));
 }
 
-describe('manual signal poll', () => {
+describe('manual signal', () => {
     let server;
     let stubEsServer;
     let manualSignal;
@@ -43,10 +44,13 @@ describe('manual signal poll', () => {
         });
     });
 
-    it('signal after elasticsearch is polled for a new value', () => {
+    it('emits event on state change', () => {
+        const eventEmitter = new EventEmitter();
         fakeMoment.setDate('2016-03-14T09:00:00');
 
         manualSignal = new manualSignalCheck({
+            type: 'manualSignal',
+            name: 'manualSignal',
             elasticsearch: {
                 host: '127.0.0.1',
                 port: 9200,
@@ -54,7 +58,7 @@ describe('manual signal poll', () => {
                 type: 'release_order_signal',
                 poll: 1
             }
-        });
+        }, eventEmitter);
 
         let requestCount = 0;
 
@@ -93,7 +97,17 @@ describe('manual signal poll', () => {
             }
         ]);
 
-        return manualSignal.start().then(waitFor(50)).then(() => manualSignal.getState())
-            .should.eventually.eql({ signal: 'red' });
+        manualSignal.start();
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal);
+            })).should.eventually.eql({
+                name: 'manualSignal',
+                type: 'manualSignal',
+                signal: {
+                    signal: 'red'
+                }
+            });
     });
 });
