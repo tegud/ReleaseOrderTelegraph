@@ -137,12 +137,38 @@ describe('manual signal', () => {
         });
     });
 
+    it('signal is set to unknown when Elasticsearch responds with an error', () => {
+        const eventEmitter = new EventEmitter();
+
+        const manualSignal = new manualSignalCheck({
+            elasticsearch: {
+                host: '127.0.0.1',
+                port: 9200,
+                index: 'releases-${YYYY}.${MM}',
+                type: 'release_order_signal'
+            }
+        });
+
+        createManualSignal(eventEmitter).then(manualSignal => manualSignal.start());
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal);
+            })).should.eventually.eql({
+                name: 'manualSignal',
+                type: 'manualSignal',
+                signal: {
+                    signal: 'unknown'
+                }
+            });
+    });
+
     describe('emits newSignal event', () => {
         it('emits event on signal change', () => {
             const eventEmitter = new EventEmitter();
 
             fakeMoment.setDate('2016-03-14T09:00:00')
-                .then(() => setSignalResponses(['green', 'red']))
+                .then(() => setSignalResponses(['red']))
                 .then(() => createManualSignal(eventEmitter))
                 .then(manualSignal => manualSignal.start());
 
@@ -162,7 +188,7 @@ describe('manual signal', () => {
             const eventEmitter = new EventEmitter();
 
             fakeMoment.setDate('2016-03-14T09:00:00')
-                .then(() => setSignalResponses(['red', { newSignal: 'red', reason: 'Reason 2' }]))
+                .then(() => setSignalResponses([{ newSignal: 'red', reason: 'Reason 2' }]))
                 .then(() => createManualSignal(eventEmitter))
                 .then(manualSignal => manualSignal.start());
 
@@ -183,7 +209,7 @@ describe('manual signal', () => {
             const eventEmitter = new EventEmitter();
 
             fakeMoment.setDate('2016-03-14T09:00:00')
-                .then(() => setSignalResponses(['red', { newSignal: 'red', setUntil: '2016-03-14T19:00:00' }]))
+                .then(() => setSignalResponses([{ newSignal: 'red', setUntil: '2016-03-14T19:00:00' }]))
                 .then(() => createManualSignal(eventEmitter))
                 .then(manualSignal => manualSignal.start());
 
@@ -204,7 +230,7 @@ describe('manual signal', () => {
             const eventEmitter = new EventEmitter();
 
             fakeMoment.setDate('2016-03-14T09:00:00')
-                .then(() => setSignalResponses(['red', { newSignal: 'red', setBy: 'Steve' }]))
+                .then(() => setSignalResponses([{ newSignal: 'red', setBy: 'Steve' }]))
                 .then(() => createManualSignal(eventEmitter))
                 .then(manualSignal => manualSignal.start());
 
@@ -230,8 +256,14 @@ describe('manual signal', () => {
             .then(() => createManualSignal(eventEmitter))
             .then(manualSignal => manualSignal.start());
 
+        let initialSet;
+
         return new Promise(resolve =>
             eventEmitter.on('newSignal', function(signal) {
+                if(!initialSet) {
+                    return initialSet = true;
+                }
+
                 resolve(signal);
             })).should.eventually.eql({
                 name: 'manualSignal',
@@ -241,4 +273,24 @@ describe('manual signal', () => {
                 }
             });
         });
+
+    it('if setUntil is before current time, signal is set to green', () => {
+        const eventEmitter = new EventEmitter();
+
+        fakeMoment.setDate('2016-03-14T08:34:12+00:00')
+            .then(() => setSignalResponses([{ newSignal: 'red', setUntil: '2016-03-14T08:34:11' }]))
+            .then(() => createManualSignal(eventEmitter))
+            .then(manualSignal => manualSignal.start());
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal);
+            })).should.eventually.eql({
+                name: 'manualSignal',
+                type: 'manualSignal',
+                signal: {
+                    signal: 'green'
+                }
+            });
+    });
 });
