@@ -1,5 +1,6 @@
 "use strict";
 
+const EventEmitter = require('events');
 const should = require('should');
 const moment = require('moment');
 const proxyquire = require('proxyquire');
@@ -9,12 +10,12 @@ const scheduleCheck = proxyquire('../../lib/checks/schedule', {
     'moment': fakeMoment.moment
 });
 
-function createScheduleCheck(config) {
-    return new Promise(resolve => resolve(scheduleCheck(config)));
+function createScheduleCheck(config, eventEmitter) {
+    return new Promise(resolve => resolve(new scheduleCheck(config, eventEmitter)));
 }
 
-function createSchedule(config) {
-    return () => createScheduleCheck(config);
+function createSchedule(config, eventEmitter) {
+    return () => createScheduleCheck(config, eventEmitter);
 }
 
 function getState() {
@@ -26,88 +27,134 @@ describe('schedule', () => {
         fakeMoment.clear();
     });
 
-    it('should return red when current date is outside the configured schedule', () =>
-        createScheduleCheck()
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('red'));
+    it('should return red when current date is outside the configured schedule', () => {
+        const eventEmitter = new EventEmitter();
 
-    it('should return green when current date is the start of the configured schedule', () =>
-        fakeMoment.setDate('2016-03-14T09:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [{ from: '09:00', to: '16:00' }]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('green'));
+        createScheduleCheck({}, eventEmitter)
+            .then(check => check.start());
 
-    it('should return green when current date is inside of the configured schedule', () =>
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.signal);
+            })).should.eventually.eql('red');
+    });
+
+    it('should return green when current date is the start of the configured schedule', () => {
+            const eventEmitter = new EventEmitter();
+
+            fakeMoment.setDate('2016-03-14T09:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [{ from: '09:00', to: '16:00' }]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    resolve(signal.signal.signal);
+                })).should.eventually.eql('green');
+    });
+
+    it('should return green when current date is inside of the configured schedule', () => {
+        const eventEmitter = new EventEmitter();
+
         fakeMoment.setDate('2016-03-14T09:00:01')
-            .then(createSchedule({
+            .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [{ from: '09:00', to: '16:00' }]
                 }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('green'));
+            }, eventEmitter))
+            .then(check => check.start());
 
-    it('should return red when current date is on schedule day, but outside the schedule', () =>
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.signal);
+            })).should.eventually.eql('green');
+    });
+
+
+    it('should return red when current date is on schedule day, but outside the schedule', () => {
+        const eventEmitter = new EventEmitter();
+
         fakeMoment.setDate('2016-03-14T08:59:59')
-            .then(createSchedule({
+            .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [{ from: '09:00', to: '16:00' }]
                 }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('red'));
+            }, eventEmitter))
+            .then(check => check.start());
 
-    it('should return amber when amber signal is specified on the schedule item', () =>
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.signal);
+            })).should.eventually.eql('red');
+    });
+
+    it('should return amber when amber signal is specified on the schedule item', () => {
+        const eventEmitter = new EventEmitter();
+
         fakeMoment.setDate('2016-03-14T09:00:00')
-            .then(createSchedule({
+            .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [{ from: '09:00', to: '16:00', signal: 'amber' }]
                 }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('amber'));
+            }, eventEmitter))
+            .then(check => check.start());
 
-    it('should return signal of the last matched schedule', () =>
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.signal);
+            })).should.eventually.eql('amber');
+    });
+
+    it('should return signal of the last matched schedule', () => {
+        const eventEmitter = new EventEmitter();
+
         fakeMoment.setDate('2016-03-14T12:00:00')
-            .then(createSchedule({
+            .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [
                         { from: '09:00', to: '16:00' },
                         { from: '12:00', to: '13:00', signal: 'amber' }
                     ]
                 }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.signal)))
-            .should.eventually.eql('amber'));
+            }, eventEmitter))
+            .then(check => check.start());
 
-    it('sets reason to matching schedule', () =>
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.signal);
+            })).should.eventually.eql('amber');
+    });
+
+
+    it('sets reason to matching schedule', () => {
+        const eventEmitter = new EventEmitter();
+
         fakeMoment.setDate('2016-03-14T12:00:00')
-            .then(createSchedule({
+            .then(() => createScheduleCheck({
                 schedule: {
                     'Monday': [
                         { from: '09:00', to: '16:00' },
                         { from: '12:00', to: '13:00', signal: 'amber', reason: 'Reduced support during lunch' }
                     ]
                 }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.reason)))
-            .should.eventually.eql('Reduced support during lunch'));
+            }, eventEmitter))
+            .then(check => check.start());
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', function(signal) {
+                resolve(signal.signal.reason);
+            })).should.eventually.eql('Reduced support during lunch');
+    });
 
     describe('defaultReasons', () => {
-        it('sets reason to default reason for unmatched schedule, matching signal', () =>
+        it('sets reason to default reason for unmatched schedule, matching signal', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T00:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     defaultReasons: {
                         'red': 'Cannot release outside of permitted schedule.'
                     },
@@ -116,14 +163,20 @@ describe('schedule', () => {
                             { from: '09:00', to: '16:00' }
                         ]
                     }
-                }))
-                .then(getState())
-                .then(result => new Promise(resolve => resolve(result.reason)))
-                .should.eventually.eql('Cannot release outside of permitted schedule.'));
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('sets reason to default reason for matching schedule and matching signal', () =>
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    resolve(signal.signal.reason);
+                })).should.eventually.eql('Cannot release outside of permitted schedule.');
+        });
+
+        it('sets reason to default reason for matching schedule and matching signal', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T09:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     defaultReasons: {
                         'green': 'Ok to release during scheduled hours'
                     },
@@ -132,77 +185,120 @@ describe('schedule', () => {
                             { from: '09:00', to: '16:00' }
                         ]
                     }
-                }))
-                .then(getState())
-                .then(result => new Promise(resolve => resolve(result.reason)))
-                .should.eventually.eql('Ok to release during scheduled hours'));
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    resolve(signal.signal.reason);
+                })).should.eventually.eql('Ok to release during scheduled hours');
+        });
     });
 
     describe('nextChange is set to next scheduled change', () => {
-        it('before day\'s schedule start', () => fakeMoment.setDate('2016-03-14T08:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [
-                        { from: '09:00', to: '16:00' }
-                    ]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.nextChange)))
-            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' }));
+        it('before day\'s schedule start', () => {
+            const eventEmitter = new EventEmitter();
 
-        it('during current day\'s schedule', () => fakeMoment.setDate('2016-03-14T09:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [
-                        { from: '09:00', to: '16:00' }
-                    ]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.nextChange)))
-            .should.eventually.eql({ 'toSignal': 'red', 'changeAt': '2016-03-14T16:00:00+00:00' }));
+            fakeMoment.setDate('2016-03-14T08:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [
+                            { from: '09:00', to: '16:00' }
+                        ]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('next schedule after matching current day\'s schedule', () => fakeMoment.setDate('2016-03-14T09:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [
-                        { from: '09:00', to: '15:00' },
-                        { from: '15:00', to: '16:00', signal: 'amber' }
-                    ]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.nextChange)))
-            .should.eventually.eql({ 'toSignal': 'amber', 'changeAt': '2016-03-14T15:00:00+00:00' }));
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal.nextChange);
+                })).should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' });
+        });
 
-        it('after current day\'s schedule', () => fakeMoment.setDate('2016-03-14T16:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [
-                        { from: '09:00', to: '16:00' }
-                    ],
-                    'Tuesday': [
-                        { from: '09:00', to: '16:00' }
-                    ]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.nextChange)))
-            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-15T09:00:00+00:00' }));
+        it('during current day\'s schedule', () => {
+            const eventEmitter = new EventEmitter();
 
-        it('after several days of no schedule', () => fakeMoment.setDate('2016-03-12T16:00:00')
-            .then(createSchedule({
-                schedule: {
-                    'Monday': [
-                        { from: '09:00', to: '16:00' }
-                    ]
-                }
-            }))
-            .then(getState())
-            .then(result => new Promise(resolve => resolve(result.nextChange)))
-            .should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' }));
+            fakeMoment.setDate('2016-03-14T09:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [
+                            { from: '09:00', to: '16:00' }
+                        ]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
 
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal.nextChange);
+                })).should.eventually.eql({ 'toSignal': 'red', 'changeAt': '2016-03-14T16:00:00+00:00' });
+        });
+
+        it('next schedule after matching current day\'s schedule', () => {
+            const eventEmitter = new EventEmitter();
+
+            fakeMoment.setDate('2016-03-14T09:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [
+                            { from: '09:00', to: '15:00' },
+                            { from: '15:00', to: '16:00', signal: 'amber' }
+                        ]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal.nextChange);
+                })).should.eventually.eql({ 'toSignal': 'amber', 'changeAt': '2016-03-14T15:00:00+00:00' });
+        });
+
+        it('after current day\'s schedule', () => {
+            const eventEmitter = new EventEmitter();
+
+            fakeMoment.setDate('2016-03-14T16:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [
+                            { from: '09:00', to: '16:00' }
+                        ],
+                        'Tuesday': [
+                            { from: '09:00', to: '16:00' }
+                        ]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal.nextChange);
+                })).should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-15T09:00:00+00:00' });
+        });
+
+        it('after several days of no schedule', () => {
+            const eventEmitter = new EventEmitter();
+
+            fakeMoment.setDate('2016-03-12T16:00:00')
+                .then(() => createScheduleCheck({
+                    schedule: {
+                        'Monday': [
+                            { from: '09:00', to: '16:00' }
+                        ]
+                    }
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal.nextChange);
+                })).should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' });
+        });
     });
 
     describe('overrides', () => {
