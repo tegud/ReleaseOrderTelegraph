@@ -302,9 +302,11 @@ describe('schedule', () => {
     });
 
     describe('overrides', () => {
-        it('matching overrides are applied', () =>
+        it('matching overrides are applied', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T13:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     schedule: {
                         'Monday': [
                             { from: '09:00', to: '16:00' }
@@ -313,12 +315,21 @@ describe('schedule', () => {
                     overrides: [
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
-                }))
-                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('start of matching override is applied', () =>
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal);
+                })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
+        });
+
+        it('start of matching override is applied', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T12:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     schedule: {
                         'Monday': [
                             { from: '09:00', to: '16:00' }
@@ -327,22 +338,40 @@ describe('schedule', () => {
                     overrides: [
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
-                }))
-                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('override applies outside of matching schedule', () =>
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal);
+                })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
+        });
+
+        it('override applies outside of matching schedule', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T12:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     schedule: { },
                     overrides: [
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
-                }))
-                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' }));
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('non-matching override is not applied', () =>
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal);
+                })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
+        });
+
+        it('non-matching override is not applied', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T11:59:59')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     schedule: {
                         'Monday': [
                             { from: '09:00', to: '16:00' }
@@ -351,12 +380,21 @@ describe('schedule', () => {
                     overrides: [
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' }
                     ]
-                }))
-                .then(getState()).should.eventually.have.properties({ signal: 'green' }));
+                }, eventEmitter))
+                .then(check => check.start());
 
-        it('applies the last of multiple matching overrides', () =>
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal);
+                })).should.eventually.have.properties({ signal: 'green' });
+        });
+
+        it('applies the last of multiple matching overrides', () => {
+            const eventEmitter = new EventEmitter();
+
             fakeMoment.setDate('2016-03-14T13:00:00')
-                .then(createSchedule({
+                .then(() => createScheduleCheck({
                     schedule: {
                         'Monday': [
                             { from: '09:00', to: '16:00' }
@@ -366,7 +404,14 @@ describe('schedule', () => {
                         { from: '2016-03-14T12:00:00', to: '2016-03-14T16:00:00', signal: 'red', 'reason': 'Change Freeze for easter period' },
                         { from: '2016-03-14T13:00:00', to: '2016-03-14T14:00:00', signal: 'red', 'reason': 'Extra special change Freeze for easter period' }
                     ]
-                }))
-                .then(getState()).should.eventually.have.properties({ signal: 'red', reason: 'Extra special change Freeze for easter period' }));
+                }, eventEmitter))
+                .then(check => check.start());
+
+            return new Promise(resolve =>
+                eventEmitter.on('newSignal', function(signal) {
+                    console.log(signal);
+                    resolve(signal.signal);
+                })).should.eventually.have.properties({ signal: 'red', reason: 'Extra special change Freeze for easter period' });
+        });
     });
 });
