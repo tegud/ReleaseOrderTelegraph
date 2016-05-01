@@ -128,6 +128,55 @@ describe('schedule', () => {
             })).should.eventually.eql('amber');
     });
 
+    it('should emit new signal at transition of schedule state', () => {
+        const eventEmitter = new EventEmitter();
+
+        fakeMoment.setDate('2016-03-14T15:59:59.990')
+            .then(() => createScheduleCheck({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' }
+                    ]
+                }
+            }, eventEmitter))
+            .then(check => check.start());
+
+        let signals = 0;
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', signal => {
+                if(!signals) {
+                    fakeMoment.setDate('2016-03-14T16:00:00.900', 'YYYY-MM-DDTHH:mm:ss.sss')
+                    signals++;
+                }
+
+                if(signal.signal.signal === 'red') {
+                    resolve(signal.signal.signal);
+                }
+            }));
+    });
+
+    it.skip('should emit new signal at transition of overlapped schedule state', () => {
+        const eventEmitter = new EventEmitter();
+
+        fakeMoment.setDate('2016-03-14T11:59:59')
+            .then(() => createScheduleCheck({
+                schedule: {
+                    'Monday': [
+                        { from: '09:00', to: '16:00' },
+                        { from: '12:00', to: '13:00', signal: 'amber' }
+                    ]
+                }
+            }, eventEmitter))
+            .then(check => check.start());
+
+        return new Promise(resolve =>
+            eventEmitter.on('newSignal', signal => {
+                if(signal.signal.signal === 'amber') {
+                    resolve(signal.signal.signal);
+                }
+            })).should.eventually.eql('amber');
+    });
 
     it('sets reason to matching schedule', () => {
         const eventEmitter = new EventEmitter();
@@ -211,7 +260,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal.nextChange);
                 })).should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-14T09:00:00+00:00' });
         });
@@ -231,7 +279,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal.nextChange);
                 })).should.eventually.eql({ 'toSignal': 'red', 'changeAt': '2016-03-14T16:00:00+00:00' });
         });
@@ -252,7 +299,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal.nextChange);
                 })).should.eventually.eql({ 'toSignal': 'amber', 'changeAt': '2016-03-14T15:00:00+00:00' });
         });
@@ -275,7 +321,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal.nextChange);
                 })).should.eventually.eql({ 'toSignal': 'green', 'changeAt': '2016-03-15T09:00:00+00:00' });
         });
@@ -320,7 +365,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal);
                 })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
         });
@@ -343,7 +387,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal);
                 })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
         });
@@ -362,7 +405,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal);
                 })).should.eventually.have.properties({ signal: 'red', reason: 'Change Freeze for easter period' });
         });
@@ -385,7 +427,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal);
                 })).should.eventually.have.properties({ signal: 'green' });
         });
@@ -409,7 +450,6 @@ describe('schedule', () => {
 
             return new Promise(resolve =>
                 eventEmitter.on('newSignal', function(signal) {
-                    console.log(signal);
                     resolve(signal.signal);
                 })).should.eventually.have.properties({ signal: 'red', reason: 'Extra special change Freeze for easter period' });
         });
